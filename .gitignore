@@ -1,0 +1,49 @@
+# ---- macos ----
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# ---- xcode: build output ----
+build/
+DerivedData/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+# ---- xcode: user-specific state; per developer, not shared ----
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# ---- swift package manager ----
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# ---- cocoapods ----
+Pods/
+
+# ---- carthage ----
+Carthage/Build/
+
+# ---- fastlane/provisioning ----
+fastlane/report.xml
+fastlane/screenshots/**/*.png
+*.mobileprovision
+*.p12
+
+# ---- misc stuffs ----
+*.log
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM

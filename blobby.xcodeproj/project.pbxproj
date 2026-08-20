@@ -6,7 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F41C1C4830372979002F774F /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = F41C1C4730372976002F774F /* .gitignore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		F41C1C4730372976002F774F /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		F4C4C0F7303720F3000BDAC1 /* blobby.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = blobby.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -32,6 +37,7 @@
 		F4C4C0EE303720F3000BDAC1 = {
 			isa = PBXGroup;
 			children = (
+				F41C1C4730372976002F774F /* .gitignore */,
 				F4C4C0F9303720F3000BDAC1 /* blobby */,
 				F4C4C0F8303720F3000BDAC1 /* Products */,
 			);
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F41C1C4830372979002F774F /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
