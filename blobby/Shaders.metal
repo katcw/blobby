@@ -24,6 +24,30 @@ struct VertexOut {
     float3 worldPosition;
 };
 
+// MARK: other shaders
+
+/**
+ looping rgb gradient using inigo quilez's procedural cosine palette,
+ maps `t` to a colour built from cosine waves so it flows smoothly
+ 
+ - parameter t: position along the colour gradient
+*/
+float3 iridescentPalette(float t) {
+    // the middle colour the gradient oscillates around per channel
+    float3 averageTint      = float3(0.62, 0.52, 0.80);
+    
+    // amplitude of per channel cosine wave
+    float3 colourAmplitude  = float3(0.33, 0.26, 0.12);
+    
+    // the number of times the gradient cycles
+    float3 colourFrequency  = float3(1.00, 1.00, 1.00);
+    
+    // shifts which colours land along t
+    float3 colourPhase      = float3(0.00, 0.50, 0.02);
+    
+    return averageTint + colourAmplitude * cos(6.28318 * (colourFrequency * t + colourPhase));
+}
+
 float genesisDisplacement(float3 position, float time, float3 seed) {
     /**
      frequency of deformations across the sphere
@@ -144,11 +168,34 @@ fragment float4 fragment_main(VertexOut in [[stage_in]], constant Uniforms &u [[
      ~0 (reflectivity) = when we look straight at the surface,
      ~1 (reflectivity) = when we look at its edge
     */
-    float reflectivityScale = 3.0;
-    float fresnel = pow(1.0 - facing, reflectivityScale);
+    // a higher reflectivity exponent restricts the edge glow, works conversely
+    float reflectivityExponent = 3.0;
+    float fresnel = pow(1.0 - facing, reflectivityExponent);
     
+    // how much surface direction drives colour
+    const float spatialWeight     = 0.6;
+    // how much the view angle shifts the hue
+    const float iridescenceWeight = 0.4;
+    // speed of colour shift while idle, driven by time
+    const float shimmerSpeed      = 0.03;
+
+    /**
+     spatial flow:
+     0 = bottom of the blob, 1 = top of the blob
+     */
+    float spatial = 0.5 + 0.5 * N.y;
+    
+    // iridescent palette input t
+    float t = spatial * spatialWeight
+            + fresnel * iridescenceWeight
+            + u.time  * shimmerSpeed;
+    
+    // feed iridescent palette and obtain colour
+    float3 colour = iridescentPalette(t);
+    
+    return float4(colour, 1.0);
     //MARK: temporary, show fresnel as greyscale so we can verify before adding colour
-    return float4(float3(fresnel), 1.0);
+//    return float4(float3(fresnel), 1.0);
     
 // MARK: deprecated solid colour
 //    // direction towards the light source
