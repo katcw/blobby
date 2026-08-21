@@ -19,6 +19,9 @@ typedef struct {
     // projecting from 3d space to screen's 2d space
     matrix_float4x4 projectionMatrix;
     
+    // random offset in the simplex noise field per launch
+    vector_float3 seed;
+    
     // seconds since launch, used for animations
     float time;
 } Uniforms;

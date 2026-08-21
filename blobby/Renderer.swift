@@ -49,6 +49,14 @@ final class Renderer: NSObject, MTKViewDelegate {
         self.device = device
         self.commandQueue = queue
         
+        /**
+         generate a random seed once at launch:
+         used to generate a random offset in the simplex noise field to randomise the blob's morph
+        */
+        uniforms.seed = SIMD3<Float>(.random(in: -100...100),
+                                     .random(in: -100...100),
+                                     .random(in: -100...100))
+
         // MARK: [1] create and store geometry to gpu buffers
         /**
          create and store geometry to gpu buffers
@@ -155,7 +163,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         uniforms.modelMatrix = matrix_float4x4(rotationY: time * spinFactor)
         
         // translate camera 3 units back
-        uniforms.viewMatrix = matrix_float4x4(translation: [0, 0, -3])
+        uniforms.viewMatrix = matrix_float4x4(translation: [0, 0, -5])
         
         // project
         uniforms.projectionMatrix = matrix_float4x4(perspectiveFOV: .pi / 3,

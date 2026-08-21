@@ -50,7 +50,8 @@ struct MetalView: UIViewRepresentable {
         
         /**
          `clearColor` is the background/base colour the metal view fills the
-         screen with each frame before the renderer renders anything on screen
+         screen with each frame before the renderer renders anything on screen.
+         currently filled with a grey colour
          */
         mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.06, alpha: 1.0)
 
