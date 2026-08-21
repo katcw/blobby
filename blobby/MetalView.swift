@@ -24,6 +24,7 @@ struct MetalView: UIViewRepresentable {
      - returns: a `Coordinator` object
     */
     func makeUIView(context: Context) -> MTKView {
+        
         let mtkView = MTKView()
         
         /**
@@ -34,12 +35,16 @@ struct MetalView: UIViewRepresentable {
         else { fatalError("this device does not support metal :(") }
         mtkView.device = device
         
+        // instructs the view to make a depth buffer for our 3d depth test
+        mtkView.colorPixelFormat = .bgra8Unorm
+        mtkView.depthStencilPixelFormat = .depth32Float
+        
         /**
          creates a `Renderer` object, stores it in the coordinator
          so it stays alive after `makeUIView` ends, and sets it as the metal view's
          delegate so the view can invoke it when required
          */
-        let renderer = Renderer(device: device)
+        let renderer = Renderer(mtkView: mtkView)
         context.coordinator.renderer = renderer
         mtkView.delegate = renderer
         
@@ -47,8 +52,8 @@ struct MetalView: UIViewRepresentable {
          `clearColor` is the background/base colour the metal view fills the
          screen with each frame before the renderer renders anything on screen
          */
-        mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.06, alpha: 1.0) // grey fill for testing
-        
+        mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.06, alpha: 1.0)
+
         return mtkView
     }
     /**
