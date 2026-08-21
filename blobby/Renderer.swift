@@ -162,8 +162,11 @@ final class Renderer: NSObject, MTKViewDelegate {
         // idle spin
         uniforms.modelMatrix = matrix_float4x4(rotationY: time * spinFactor)
         
-        // translate camera 3 units back
-        uniforms.viewMatrix = matrix_float4x4(translation: [0, 0, -5])
+        // camera distance
+        let cameraDistance: Float = 6
+        // translate camera cameraDistance units back
+        uniforms.viewMatrix = matrix_float4x4(translation: [0, 0, -cameraDistance])
+        uniforms.cameraPosition = [0, 0, cameraDistance]
         
         // project
         uniforms.projectionMatrix = matrix_float4x4(perspectiveFOV: .pi / 3,
@@ -178,7 +181,7 @@ final class Renderer: NSObject, MTKViewDelegate {
                                         znear: 0, zfar: 1))
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 1)
-
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 1)
         encoder.drawIndexedPrimitives(type: .triangle,
                                        indexCount: indexCount,
                                        indexType: .uint32,

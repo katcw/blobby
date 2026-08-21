@@ -11,16 +11,17 @@
 
 using namespace metal;
 
-// vertex input
+// MARK: vertex input
 struct VertexIn {
     float3 position [[attribute(0)]];
     float3 normal   [[attribute(1)]];
 };
 
-// vertex output and fragment shader input
+// MARK: vertex output, fragment shader input
 struct VertexOut {
     float4 position [[position]];
     float3 worldNormal;
+    float3 worldPosition;
 };
 
 float genesisDisplacement(float3 position, float time, float3 seed) {
@@ -42,7 +43,7 @@ float genesisDisplacement(float3 position, float time, float3 seed) {
     float drift = time * driftSpeed;
     
     /**
-     slide the point across (along the x-axis) the simplex noise field over time
+     slide the point across the simplex noise field over time
      this allows the blob to morph over time
     */
     float n = snoise(position * frequency + seed + float3(0.0, drift, 0.0));
@@ -52,61 +53,122 @@ float genesisDisplacement(float3 position, float time, float3 seed) {
 }
 
 /**
+ where a point on the base sphere ends up after being displaced by `GenesisDisplacement`
+ 
+ // random offset in the simplex noise field per launch
+ vector_float3 seed;
+ 
+ // seconds since launch, used for animations
+
+ - parameter sphereDirection: a unit length direction (a point on the base unit sphere)
+ - parameter time:            seconds since launch, passed straight through the simplex noise
+ - parameter seed:            random offset in the simplex noise field per launch, passed straight through the simplex noise
+ 
+ - returns:                   the displaced point
+*/
+float3 displacedPoint(float3 sphereDirection, float time, float3 seed) {
+    float height = genesisDisplacement(sphereDirection, time, seed);
+    
+    // push displacement along the normal
+    return sphereDirection + sphereDirection * height;
+}
+
+/**
  the vertex shader responsible for taking a point from the local model space and
  determining its location on screen
 */
 vertex VertexOut vertex_main(VertexIn in [[stage_in]], constant Uniforms &u [[buffer(1)]]) {
     VertexOut out;
     
-    // place vertex in world
+    // MARK: placing vertex in world
     
-    /**
-     how far to move the vertex, from the
-     genesis displacement/simplex noise field
-    */
-    float height = genesisDisplacement(in.position, u.time, u.seed);
+    // MARK: apply displacement
+    // base sphere normal
+    float3 baseSphereNormal = in.normal;
     
-    // apply displacement
-    float3 displacedPosition = in.position + in.normal * height;
+    // build two directions that lie along the sphere surface, perpendicular to baseSphereNormal
+    float3 helper = abs(baseSphereNormal.y) < 0.99 ? float3(0, 1, 0) : float3(1, 0, 0);
+    float3 tangent = normalize(cross(helper, baseSphereNormal));
+    float3 bitangent = cross(baseSphereNormal, tangent);
      
+    /**
+     step to both sides along each tangent,
+     this produces a symmetric, low-noise normal
+    */
+    float sampleStep = 0.1;
+    
+    float3 pTp = displacedPoint(normalize(baseSphereNormal + tangent * sampleStep),   u.time, u.seed);
+    float3 pTm = displacedPoint(normalize(baseSphereNormal - tangent * sampleStep),   u.time, u.seed);
+    float3 pBp = displacedPoint(normalize(baseSphereNormal + bitangent * sampleStep), u.time, u.seed);
+    float3 pBm = displacedPoint(normalize(baseSphereNormal - bitangent * sampleStep), u.time, u.seed);
+
+    // the cross product of two surface edges produces a normal perpendicular to the surface
+    float3 newNormal = normalize(cross((pTp - pTm), (pBp - pBm)));
+
+    float3 displacedPosition = displacedPoint(baseSphereNormal, u.time, u.seed);
+
     // feed displaced point into the model matrix
     float4 worldPosition = u.modelMatrix * float4(displacedPosition, 1.0);
+    
+    // pass vertex world space position
+    out.worldPosition = worldPosition.xyz;
     
     // convert from world space to camera-relative space, then apply perspective
     out.position = u.projectionMatrix * u.viewMatrix * worldPosition;
     
     // rotate normal
-    out.worldNormal = normalize((u.modelMatrix * float4(in.normal, 0.0)).xyz);
+    out.worldNormal = normalize((u.modelMatrix * float4(newNormal, 0.0)).xyz);
     
     return out;
 }
 
 /**
- the fragment shader responsible for determining the colour
- for each pixel
+ the fragment shader responsible for determining the colour for each pixel
+ incorporates fresnel computation
 */
-fragment float4 fragment_main(VertexOut in [[stage_in]]) {
+fragment float4 fragment_main(VertexOut in [[stage_in]], constant Uniforms &u [[buffer(1)]]) {
     // surface direction at this pixel
     float3 N = normalize(in.worldNormal);
     
-    // direction towards the light source
-    float3 L = normalize(float3(0.5, 0.8, 1.0));
+    // direction from the current pixel towards the camera
+    float3 V = normalize(u.cameraPosition - in.worldPosition);
     
     /**
-     measures how much of the surface faces the light,
-     clamp to 0 since there is no "negative light"
+     compute how much the current pixel faces the camera:
+     1.0 = pixels faces straight at the camera, 0.0 = pixel is at the edge, not facing the camera
     */
-    float diffuse = max(dot(N, L), 0.0);
+    float facing = clamp(dot(N, V), 0.0, 1.0);
     
-    // flat base colour to apply to pixel
-    float3 baseColour = float3(0.961, 0.961, 0.863);
+    /**
+     computes the fresnel where our viewing angle affects light reflectivity:
+     ~0 (reflectivity) = when we look straight at the surface,
+     ~1 (reflectivity) = when we look at its edge
+    */
+    float reflectivityScale = 3.0;
+    float fresnel = pow(1.0 - facing, reflectivityScale);
     
-    // ambient colour and scaling factor for diffuse
-    float ambient = 0.2;
-    float diffuseScaleFactor = 0.8;
+    //MARK: temporary, show fresnel as greyscale so we can verify before adding colour
+    return float4(float3(fresnel), 1.0);
     
-    // scaled colour based on ambient and diffuse
-    float3 colour = baseColour * (ambient + diffuseScaleFactor * diffuse);
-    
-    return float4(colour, 1.0);
+// MARK: deprecated solid colour
+//    // direction towards the light source
+//    float3 L = normalize(float3(0.5, 0.8, 1.0));
+//    
+//    /**
+//     measures how much of the surface faces the light,
+//     clamp to 0 since there is no "negative light"
+//    */
+//    float diffuse = max(dot(N, L), 0.0);
+//    
+//    // flat base colour to apply to pixel
+//    float3 baseColour = float3(0.961, 0.961, 0.863);
+//    
+//    // ambient colour and scaling factor for diffuse
+//    float ambient = 0.2;
+//    float diffuseScaleFactor = 0.8;
+//    
+//    // scaled colour based on ambient and diffuse
+//    float3 colour = baseColour * (ambient + diffuseScaleFactor * diffuse);
+//    
+//    return float4(colour, 1.0);
 }
