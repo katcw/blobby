@@ -34,16 +34,16 @@ struct VertexOut {
 */
 float3 iridescentPalette(float t) {
     // the middle colour the gradient oscillates around per channel
-    float3 averageTint      = float3(0.62, 0.52, 0.80);
+    float3 averageTint      = float3(0.80, 0.80, 0.82);
     
     // amplitude of per channel cosine wave
-    float3 colourAmplitude  = float3(0.33, 0.26, 0.12);
+    float3 colourAmplitude  = float3(0.35, 0.35, 0.35);
     
     // the number of times the gradient cycles
     float3 colourFrequency  = float3(1.00, 1.00, 1.00);
     
     // shifts which colours land along t
-    float3 colourPhase      = float3(0.00, 0.50, 0.02);
+    float3 colourPhase      = float3(0.00, 0.33, 0.67);
     
     return averageTint + colourAmplitude * cos(6.28318 * (colourFrequency * t + colourPhase));
 }
@@ -163,13 +163,14 @@ fragment float4 fragment_main(VertexOut in [[stage_in]], constant Uniforms &u [[
     */
     float facing = clamp(dot(N, V), 0.0, 1.0);
     
+    // MARK: iridescent base colour
     /**
      computes the fresnel where our viewing angle affects light reflectivity:
      ~0 (reflectivity) = when we look straight at the surface,
      ~1 (reflectivity) = when we look at its edge
     */
     // a higher reflectivity exponent restricts the edge glow, works conversely
-    float reflectivityExponent = 3.0;
+    float reflectivityExponent = 5.0;
     float fresnel = pow(1.0 - facing, reflectivityExponent);
     
     // how much surface direction drives colour
@@ -190,10 +191,35 @@ fragment float4 fragment_main(VertexOut in [[stage_in]], constant Uniforms &u [[
             + fresnel * iridescenceWeight
             + u.time  * shimmerSpeed;
     
-    // feed iridescent palette and obtain colour
-    float3 colour = iridescentPalette(t);
+    // feed iridescent palette and obtain base colour
+    float3 baseColour = iridescentPalette(t);
+    
+    // MARK: soft diffuse and specular highlight
+    
+    // direction towards the light
+    float3 L = normalize(float3(0.5, 0.8, 1.0));
+    
+    // soft diffuse
+    float diffuse = clamp(dot(N, L), 0.0, 1.0);
+    
+    // blinn-phong specular which produces the glossy hotspot
+    float3 H = normalize(L + V);
+    
+    // controls glint amount
+    float shininess = 60;
+    float specular = pow(clamp(dot(N,  H), 0.0, 1.0), shininess);
+    
+    // base colour and shading
+    float3 colour = baseColour * (0.85 + 0.15 * diffuse);
+    
+    // white gloss highlight on top of blob
+    colour += float3(1.0) * specular * 0.9;
+    
+    // iridescent rim glow at edges
+    colour += baseColour * fresnel * 0.35;
     
     return float4(colour, 1.0);
+    
     //MARK: temporary, show fresnel as greyscale so we can verify before adding colour
 //    return float4(float3(fresnel), 1.0);
     
