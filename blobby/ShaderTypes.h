@@ -27,4 +27,7 @@ typedef struct {
     
     // seconds since launch, used for animations
     float time;
+    
+    // accumulated horizontal drag offset
+    float horizontalMorphOffset;
 } Uniforms;

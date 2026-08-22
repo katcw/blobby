@@ -48,7 +48,7 @@ float3 iridescentPalette(float t) {
     return averageTint + colourAmplitude * cos(6.28318 * (colourFrequency * t + colourPhase));
 }
 
-float genesisDisplacement(float3 position, float time, float3 seed) {
+float genesisDisplacement(float3 position, float time, float3 seed, float horizontalMorphOffset) {
     /**
      frequency of deformations across the sphere
      the higher the frequency, the more deformations across the sphere
@@ -67,10 +67,10 @@ float genesisDisplacement(float3 position, float time, float3 seed) {
     float drift = time * driftSpeed;
     
     /**
-     slide the point across the simplex noise field over time
+     slide the point across the simplex noise field over time or from horizontal drag
      this allows the blob to morph over time
     */
-    float n = snoise(position * frequency + seed + float3(0.0, drift, 0.0));
+    float n = snoise(position * frequency + seed + float3(horizontalMorphOffset, drift, 0.0));
     
     // return in range ~[-amplitude, amplitude], either pull or push
     return n * amplitude;
@@ -90,8 +90,8 @@ float genesisDisplacement(float3 position, float time, float3 seed) {
  
  - returns:                   the displaced point
 */
-float3 displacedPoint(float3 sphereDirection, float time, float3 seed) {
-    float height = genesisDisplacement(sphereDirection, time, seed);
+float3 displacedPoint(float3 sphereDirection, float time, float3 seed, float horizontalMorphOffset) {
+    float height = genesisDisplacement(sphereDirection, time, seed, horizontalMorphOffset);
     
     // push displacement along the normal
     return sphereDirection + sphereDirection * height;
@@ -121,15 +121,15 @@ vertex VertexOut vertex_main(VertexIn in [[stage_in]], constant Uniforms &u [[bu
     */
     float sampleStep = 0.1;
     
-    float3 pTp = displacedPoint(normalize(baseSphereNormal + tangent * sampleStep),   u.time, u.seed);
-    float3 pTm = displacedPoint(normalize(baseSphereNormal - tangent * sampleStep),   u.time, u.seed);
-    float3 pBp = displacedPoint(normalize(baseSphereNormal + bitangent * sampleStep), u.time, u.seed);
-    float3 pBm = displacedPoint(normalize(baseSphereNormal - bitangent * sampleStep), u.time, u.seed);
+    float3 pTp = displacedPoint(normalize(baseSphereNormal + tangent * sampleStep),   u.time, u.seed, u.horizontalMorphOffset);
+    float3 pTm = displacedPoint(normalize(baseSphereNormal - tangent * sampleStep),   u.time, u.seed, u.horizontalMorphOffset);
+    float3 pBp = displacedPoint(normalize(baseSphereNormal + bitangent * sampleStep), u.time, u.seed, u.horizontalMorphOffset);
+    float3 pBm = displacedPoint(normalize(baseSphereNormal - bitangent * sampleStep), u.time, u.seed,u.horizontalMorphOffset);
 
     // the cross product of two surface edges produces a normal perpendicular to the surface
     float3 newNormal = normalize(cross((pTp - pTm), (pBp - pBm)));
 
-    float3 displacedPosition = displacedPoint(baseSphereNormal, u.time, u.seed);
+    float3 displacedPosition = displacedPoint(baseSphereNormal, u.time, u.seed, u.horizontalMorphOffset);
 
     // feed displaced point into the model matrix
     float4 worldPosition = u.modelMatrix * float4(displacedPosition, 1.0);

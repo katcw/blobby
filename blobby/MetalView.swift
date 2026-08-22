@@ -11,6 +11,9 @@ import MetalKit
 
 struct MetalView: UIViewRepresentable {
     
+    // shared morph state, owned by ContentView
+    let morph: MorphController
+    
     /**
      creates a coordinator, a helper object that acts as a "middleman" between swiftui and the metal view
      - returns: a `Coordinator` object
@@ -44,7 +47,7 @@ struct MetalView: UIViewRepresentable {
          so it stays alive after `makeUIView` ends, and sets it as the metal view's
          delegate so the view can invoke it when required
          */
-        let renderer = Renderer(mtkView: mtkView)
+        let renderer = Renderer(mtkView: mtkView, morph: morph)
         context.coordinator.renderer = renderer
         mtkView.delegate = renderer
         
@@ -53,7 +56,7 @@ struct MetalView: UIViewRepresentable {
          screen with each frame before the renderer renders anything on screen.
          currently filled with a grey colour
          */
-        mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.06, alpha: 1.0)
+        mtkView.clearColor = MTLClearColor(red: 1, green: 1, blue: 1, alpha: 1.0)
 
         return mtkView
     }

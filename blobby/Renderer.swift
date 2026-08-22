@@ -29,6 +29,12 @@ final class Renderer: NSObject, MTKViewDelegate {
     private var aspect: Float = 1
     private let startTime = CACurrentMediaTime()
     
+    // our morphController object
+    private let morph: MorphController
+    
+    // timestamp of the previous frame for computing deltaTime
+    private var lastFrameTime = CACurrentMediaTime()
+    
     // MARK: init
     /**
      similar to a constructor in c++,
@@ -36,7 +42,10 @@ final class Renderer: NSObject, MTKViewDelegate {
      
      - parameter device: a reference to the device's gpu
      */
-    init(mtkView: MTKView) {
+    init(mtkView: MTKView, morph: MorphController) {
+        // store our morphController object
+        self.morph = morph
+        
         // get device gpu handler
         guard let device = mtkView.device,
               // instruct gpu to create a command queue
@@ -154,10 +163,21 @@ final class Renderer: NSObject, MTKViewDelegate {
     
         // update per-frame uniforms
         let time = Float(CACurrentMediaTime() - startTime)
+        
+        // deltaTime
+        let now = CACurrentMediaTime()
+        let deltaTime = min(Float(now - lastFrameTime), 1.0 / 30.0)
+        lastFrameTime = now
+        
+        // advance glide by one frame according to deltaTime
+        morph.step(deltaTime: deltaTime)
+        
         // spin factor
         let spinFactor: Float = 0.4
         
+        // update time and horizontal morph offset from our morphOffset object
         uniforms.time = time
+        uniforms.horizontalMorphOffset = morph.horizontalOffset
         
         // idle spin
         uniforms.modelMatrix = matrix_float4x4(rotationY: time * spinFactor)
